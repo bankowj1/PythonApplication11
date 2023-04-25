@@ -13,6 +13,8 @@ class ScreenObject:
         self.position = position
         self.scaleObj = scaleObj
         self.rotation = Quaternion(rotation)
+    def draw(self):
+        self.screen_projection()
 
     def get_object(self):
         return self.obj
@@ -50,7 +52,7 @@ class ScreenObject:
         
         scale_mat = translate(self.position)
         
-        rot_mat = self.rotation.rotation_matrix
+        rot_mat = self.rotation.transformation_matrix
         
         world_mat = pos_mat @ rot_mat @ scale_mat
         
@@ -62,6 +64,16 @@ class ScreenObject:
         projection_mat = self.render.camera.projection_matrix()
         transform_mat = world_mat @ camera_mat @ projection_mat
         vert = self.obj.vertices @ transform_mat
+        vert /= vert[:, -1].reshape(-1, 1)
+        vert[(vert > 2) | (vert < -2)] = 0
+        screen_mat =np.array([
+            [self.render.H_WIDTH, 0, 0, 0],
+            [0, -self.render.H_HEIGHT, 0, 0],
+            [0, 0, 1, 0],
+            [self.render.H_WIDTH, self.render.H_HEIGHT, 0, 1]
+        ])
+        vert = vert @ screen_mat
+        vert = vert[:,:2]
         for tri in self.obj.triangles:
             poly = vert[tri]
             pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
