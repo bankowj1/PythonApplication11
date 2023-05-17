@@ -1,3 +1,4 @@
+from random import triangular
 from object_3d import Object3D
 from numpy import ndarray
 from pyquaternion import Quaternion
@@ -58,14 +59,51 @@ class ScreenObject:
         
         return world_mat
 
+    def normalize(self,v):
+        return v / np.sqrt(np.sum(v**2)) if np.sqrt(np.sum(v**2)) >= 1e-6 else v
+
     def screen_projection(self):
         world_mat = self.get_world_mat()
         camera_mat = self.render.camera.camera_matrix()
         projection_mat = self.render.camera.projection_matrix()
         transform_mat = world_mat @ camera_mat @ projection_mat
+
+        #calc normals
+        normals = []
+        for tri in self.obj.triangles:
+            i_0 = tri[0]
+            i_1 = tri[1]
+            i_2 = tri[2]
+            v_0 = self.obj.vertices[i_0]
+            v_1 = self.obj.vertices[i_1]
+            v_2 = self.obj.vertices[i_2]
+            v_a = v_1[:3]-v_0[:3]
+            v_b = v_2[:3]-v_0[:3]
+            normal = self.normalize(np.cross(v_a, v_b))
+            normals.append([*normal,0.0])
+
+        view_normals = list(map(lambda model_n: self.normalize((model_n @ (world_mat@camera_mat))[:3]), normals))
+        #moving points important! part
+        
         vert = self.obj.vertices @ transform_mat
         vert /= vert[:, -1].reshape(-1, 1)
-        vert[(vert > 2) | (vert < -2)] = 0
+        #vert[(vert > 2) | (vert < -2)] = 0
+        
+        vis_tri_idx = []
+        n_tri = len(self.obj.triangles)
+
+        for tri_i in range(n_tri):
+            triangle = self.obj.triangles[tri_i]
+            idx0 = triangle[0]
+            idx1 = triangle[1]
+            idx2 = triangle[2]
+
+            v0 = vert[idx0]
+            v1 = vert[idx1]
+            v2 = vert[idx2]
+
+
+        
         screen_mat =np.array([
             [self.render.H_WIDTH, 0, 0, 0],
             [0, -self.render.H_HEIGHT, 0, 0],
@@ -73,8 +111,11 @@ class ScreenObject:
             [self.render.H_WIDTH, self.render.H_HEIGHT, 0, 1]
         ])
         vert = vert @ screen_mat
-        vert = vert[:,:2]
+        vert = vert[:,:3]
         for tri in self.obj.triangles:
             poly = vert[tri]
+            #normalvec = np.linalg.norm(np.cross( poly[1]-poly[0],poly[2]-poly[0] ))
+            #if(np.dot(normalvec,poly[0]-self.position)[0]<0.0):
+            poly = poly[:,:2]
             pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
         print(1)

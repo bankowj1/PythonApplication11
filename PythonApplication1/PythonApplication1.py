@@ -10,7 +10,7 @@ class Rander:
         pg.init()
         self.RES = self.WIDTH, self.HEIGHT = 1600,900
         self.H_WIDTH, self.H_HEIGHT = self.WIDTH // 2, self.HEIGHT // 2
-        self.FPS = 30
+        self.FPS = 120
         self.screen = pg.display.set_mode(self.RES)
         self.clock = pg.time.Clock()
         self.create_objects()
@@ -19,7 +19,7 @@ class Rander:
     def create_objects(self):
         self.camera = Camera(self,np.array([0.0,0.0,-4.0]),np.array([1.0,0.0,0.0,1.0]))
         obj = Object3D()
-        obj.read_obj_file('cube.obj')
+        obj.read_obj_file('ball.obj')
         self.obj1 = ScreenObject(self,obj)
 
 

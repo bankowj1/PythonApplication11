@@ -84,7 +84,7 @@ class Camera:
 
     def camera_matrix(self):
         self.camera_update_axii()
-        return np.linalg.inv(translate(self.position) @ self.rotation.transformation_matrix)
+        return np.linalg.inv(self.rotation.transformation_matrix@translate(self.position))
 
     def projection_matrix(self):
         m00 = self.aspect*(1/math.tan(math.radians(self.fov/ 2)))
