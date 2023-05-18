@@ -19,7 +19,7 @@ class Rander:
     def create_objects(self):
         self.camera = Camera(self,np.array([0.0,0.0,-4.0]),np.array([1.0,0.0,0.0,1.0]))
         obj = Object3D()
-        obj.read_obj_file('cube.obj')
+        obj.read_obj_file('test.obj')
         self.obj1 = ScreenObject(self,obj)
 
 

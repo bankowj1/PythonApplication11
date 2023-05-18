@@ -59,7 +59,27 @@ class ScreenObject:
         
         return world_mat
 
-    
+    def get_z_extents(self, tri):
+        tri_array = np.array(tri)  
+        z_values = tri_array[:, 2]
+        return np.min(z_values), np.max(z_values)
+
+    def check_bounding_box_overlap(self,triangle1, triangle2):
+        triangle1 = np.array(triangle1)
+        triangle2 = np.array(triangle2)
+        min_x1, max_x1 = np.min(triangle1[:, 0]), np.max(triangle1[:, 0])
+        min_y1, max_y1 = np.min(triangle1[:, 1]), np.max(triangle1[:, 1])
+
+        min_x2, max_x2 = np.min(triangle2[:, 0]), np.max(triangle2[:, 0])
+        min_y2, max_y2 = np.min(triangle2[:, 1]), np.max(triangle2[:, 1])
+
+        if (max_x1 < min_x2 or min_x1 > max_x2) or \
+           (max_y1 < min_y2 or min_y1 > max_y2):
+            # Bounding boxes do not overlap
+            return False
+        else:
+            # Bounding boxes overlap
+            return True
 
     def screen_projection(self):
         world_mat = self.get_world_mat()
@@ -114,13 +134,37 @@ class ScreenObject:
                 tris = np.append(tris,[tri], axis=0)
             for tri in triss:
                 vis_tri_idx.append(tri)
-            #add points and triangles to tris 
-            #and transform points 
-            #and add to vert 
-            #change form to return idxed triangles 
-            #and new points
-            #for tri in triss:
-                #adding take place here
+
+        z_extents = [self.get_z_extents([vert[tri_n[0]], vert[tri_n[1]], vert[tri_n[2]]]) for tri_n in vis_tri_idx]
+        sorted_triangles = []
+        # Sort z_extents and triangles based on min_z values
+        fortest = True
+        while(fortest):
+            fortest = False
+            if(len(vis_tri_idx)>1):
+                sorted_data = sorted(zip(z_extents, vis_tri_idx), key=lambda x: x[0][0])
+
+                # Extract sorted z_extents and triangles
+                sorted_z_extents, sorted_triangles = zip(*sorted_data)
+
+                for i in range(len(sorted_z_extents) - 1):
+                    curr_extent = sorted_z_extents[i]
+                    next_extent = sorted_z_extents[i+1]
+
+                    if curr_extent[1] > next_extent[0]:
+                        if self.check_bounding_box_overlap([vert[sorted_triangles[i][0]], vert[sorted_triangles[i][1]], vert[sorted_triangles[i][2]]],[vert[sorted_triangles[i+1][0]], vert[sorted_triangles[i+1][1]], vert[sorted_triangles[i+1][2]]]):
+                            triss,new_tris,new_vert = clip_tri_plane(np.array([0.0, 0.0, 0.1]), np.array([0.0, 0.0, 1.0]),triangle,np.array([v0[:3],v1[:3],v2[:3]]),n_vert)
+                            #add new clip tri plane for division 
+                            for ver in new_vert:
+                                vert = np.append(vert,[ver], axis=0)
+                            for tri in new_tris:
+                                tris = np.append(tris,[tri], axis=0)
+                            for tri in triss:
+                                vis_tri_idx.append(tri)
+                                #if new triangles fortest = true
+                
+                
+
 
         vert = vert @ projection_mat
         vert /= vert[:, -1].reshape(-1, 1)
@@ -132,11 +176,12 @@ class ScreenObject:
         ])
         vert = vert @ screen_mat
         vert = vert[:,:3]
-        for tri in vis_tri_idx:
-            poly = vert[tri]
-            #normalvec = np.linalg.norm(np.cross( poly[1]-poly[0],poly[2]-poly[0] ))
-            #if(np.dot(normalvec,poly[0]-self.position)[0]<0.0):
-            poly = poly[:,:2]
-            pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
-            pg.draw.polygon(self.render.screen, pg.Color('white'),poly)
-        print(1)
+        if(len(sorted_triangles)>0):
+            for tri in sorted_triangles:
+                poly = vert[tri]
+                #normalvec = np.linalg.norm(np.cross( poly[1]-poly[0],poly[2]-poly[0] ))
+                #if(np.dot(normalvec,poly[0]-self.position)[0]<0.0):
+                poly = poly[:,:2]
+                pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
+                pg.draw.polygon(self.render.screen, pg.Color('white'),poly)
+            print(1)

@@ -18,8 +18,14 @@ class Camera:
         self.aspect = render.HEIGHT / render.WIDTH
         self.near_plane = 0.1
         self.far_plane = 100
-        self.moving_speed = 0.3
+        self.moving_speed = 0.1
         self.rotation_speed = 0.015
+    def move(self,v):
+        q = Quaternion(0.0,*v)
+
+        res = self.rotation.conjugate * q * self.rotation
+
+        return np.array([res.x,res.y,-res.z])
 
     def control(self):
         key = pg.key.get_pressed()
@@ -29,37 +35,43 @@ class Camera:
                 rotation = Quaternion._from_axis_angle(np.array([0.0, math.radians(90), 0.0]),self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position -= self.rotation.rotate(np.array([0.0, 0.0,self.moving_speed]))
+                v = self.move(np.array([self.moving_speed, 0.0,0.0]))
+                self.position += v
         if key[pg.K_d]:
             if mods & pg.KMOD_SHIFT:
                 rotation = Quaternion._from_axis_angle(np.array([0.0, math.radians(90), 0.0]),-self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position += self.rotation.rotate(np.array([0.0, 0.0,self.moving_speed]))
+                v = self.move(np.array([-self.moving_speed, 0.0,0.0]))
+                self.position += v
         if key[pg.K_w]:
             if mods & pg.KMOD_SHIFT:
                 rotation = Quaternion._from_axis_angle(np.array([math.radians(90), 0.0, 0.0]),self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position += self.rotation.rotate(np.array([self.moving_speed,0.0, 0.0]))
+                v = self.move(np.array([ 0.0,0.0,self.moving_speed]))
+                self.position += v
         if key[pg.K_s]:
             if mods & pg.KMOD_SHIFT:
                 rotation = Quaternion._from_axis_angle(np.array([math.radians(90), 0.0, 0.0]),-self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position -= self.rotation.rotate(np.array([self.moving_speed,0.0, 0.0]))
+                v = self.move(np.array([ 0.0,0.0,-self.moving_speed]))
+                self.position += v
         if key[pg.K_q]:
             if mods & pg.KMOD_SHIFT:
                 rotation = Quaternion._from_axis_angle(np.array([0.0, 0.0, math.radians(90)]),self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position += self.rotation.rotate(np.array([0.0, self.moving_speed, 0.0]))
+                v = self.move(np.array([ 0.0,self.moving_speed,0.0]))
+                self.position += v
         if key[pg.K_e]:
             if mods & pg.KMOD_SHIFT:
                 rotation = Quaternion._from_axis_angle(np.array([0.0, 0.0,math.radians(90)]),-self.rotation_speed)
                 self.camera_rotate(rotation)
             else:
-                self.position -= self.rotation.rotate(np.array([0.0, self.moving_speed, 0.0]))
+                v = self.move(np.array([ 0.0,-self.moving_speed,0.0]))
+                self.position += v
 
     def camera_rotate(self, angle):
         print(angle)
