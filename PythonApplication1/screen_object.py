@@ -59,14 +59,13 @@ class ScreenObject:
         
         return world_mat
 
-    def normalize(self,v):
-        return v / np.sqrt(np.sum(v**2)) if np.sqrt(np.sum(v**2)) >= 1e-6 else v
+    
 
     def screen_projection(self):
         world_mat = self.get_world_mat()
         camera_mat = self.render.camera.camera_matrix()
         projection_mat = self.render.camera.projection_matrix()
-        transform_mat = world_mat @ camera_mat @ projection_mat
+        transform_mat = world_mat @ camera_mat
 
         #calc normals
         normals = []
@@ -79,21 +78,24 @@ class ScreenObject:
             v_2 = self.obj.vertices[i_2]
             v_a = v_1[:3]-v_0[:3]
             v_b = v_2[:3]-v_0[:3]
-            normal = self.normalize(np.cross(v_a, v_b))
+            normal = normalize(np.cross(v_a, v_b))
             normals.append([*normal,0.0])
 
-        view_normals = list(map(lambda model_n: self.normalize((model_n @ (world_mat@camera_mat))[:3]), normals))
+        view_normals = list(map(lambda model_n: normalize((model_n @ (world_mat@camera_mat))[:3]), normals))
         #moving points important! part
         
         vert = self.obj.vertices @ transform_mat
-        vert /= vert[:, -1].reshape(-1, 1)
-        #vert[(vert > 2) | (vert < -2)] = 0
         
-        vis_tri_idx = []
-        n_tri = len(self.obj.triangles)
 
+        tris = np.copy(self.obj.triangles)
+        vis_tri_idx = []
+        n_tri = len(tris)
+        n_vert = len(vert)
         for tri_i in range(n_tri):
-            triangle = self.obj.triangles[tri_i]
+
+            normal = view_normals[tri_i]
+            triangle = tris[tri_i]
+            
             idx0 = triangle[0]
             idx1 = triangle[1]
             idx2 = triangle[2]
@@ -102,8 +104,26 @@ class ScreenObject:
             v1 = vert[idx1]
             v2 = vert[idx2]
 
+            if not ((v0[0] * normal[0] + v0[1] * normal[1] + v0[2] * normal[2]) < 0):
+                continue
 
-        
+            triss,new_tris,new_vert = clip_tri_plane(np.array([0.0, 0.0, 0.1]), np.array([0.0, 0.0, 1.0]),triangle,np.array([v0[:3],v1[:3],v2[:3]]),n_vert)
+            for ver in new_vert:
+                vert = np.append(vert,[ver], axis=0)
+            for tri in new_tris:
+                tris = np.append(tris,[tri], axis=0)
+            for tri in triss:
+                vis_tri_idx.append(tri)
+            #add points and triangles to tris 
+            #and transform points 
+            #and add to vert 
+            #change form to return idxed triangles 
+            #and new points
+            #for tri in triss:
+                #adding take place here
+
+        vert = vert @ projection_mat
+        vert /= vert[:, -1].reshape(-1, 1)
         screen_mat =np.array([
             [self.render.H_WIDTH, 0, 0, 0],
             [0, -self.render.H_HEIGHT, 0, 0],
@@ -112,10 +132,11 @@ class ScreenObject:
         ])
         vert = vert @ screen_mat
         vert = vert[:,:3]
-        for tri in self.obj.triangles:
+        for tri in vis_tri_idx:
             poly = vert[tri]
             #normalvec = np.linalg.norm(np.cross( poly[1]-poly[0],poly[2]-poly[0] ))
             #if(np.dot(normalvec,poly[0]-self.position)[0]<0.0):
             poly = poly[:,:2]
             pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
+            pg.draw.polygon(self.render.screen, pg.Color('white'),poly)
         print(1)
