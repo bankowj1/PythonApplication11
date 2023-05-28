@@ -119,7 +119,7 @@ def clip_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         p = normalize(p)
         return np.dot(plane_n, p) - np.dot(plane_n, plane_p)
 
-    # Create two temporary storage arrays to classify points either side of plane
+    # Create temporary storage arrays to classify points either side of plane
     # If distance sign is positive, point lies on "inside" of plane
     inside_points = []
     inside_verts = []
@@ -185,7 +185,7 @@ def clip_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         new_vert.append( np.array([*nv2,1.0]))
         out_tri1[1] = n_vert
         out_tri1[2] = n_vert + 1
-
+        new_tris.append(out_tri1)
         return [out_tri1],new_tris ,new_vert  # Return the newly formed single triangle
 
     if len(inside_points) == 2 and len(outside_points) == 1:
@@ -217,7 +217,134 @@ def clip_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         nv2 = vector_IntersectPlane(plane_p, plane_n, inside_verts[1], outside_verts[0])
         if  nv2 is None :
             return [] , [] , []
+        new_tris.append(out_tri1)
+        new_tris.append(out_tri2)
         new_vert.append(np.array([*nv2,1.0]))
         
         return [out_tri1, out_tri2],new_tris ,new_vert   # Return two newly formed triangles which form a quad
+
+
+
+def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
+    # Make sure plane normal is indeed normal
+    plane_n = normalize(plane_n)
+
+    new_vert = []
+
+    # Function to compute signed shortest distance from point to plane
+    def dist(p):
+        p = normalize(p)
+        return np.dot(plane_n, p) - np.dot(plane_n, plane_p)
+
+    # Create temporary storage arrays to classify points either side of plane
+    # If distance sign is positive, point lies on "inside" of plane
+    inside_points = []
+    inside_verts = []
+    outside_points = []
+    outside_verts = []
+
+    # Get signed distance of each point in triangle to plane
+    d0 = dist(in_vert[0])
+    d1 = dist(in_vert[1])
+    d2 = dist(in_vert[2])
+
+    if d0 >= 0:
+        inside_points.append(in_tri[0])
+        inside_verts.append(in_vert[0])
+    else:
+        outside_points.append(in_tri[0])
+        outside_verts.append(in_vert[0])
+    if d1 >= 0:
+        inside_points.append(in_tri[1])
+        inside_verts.append(in_vert[1])
+    else:
+        outside_points.append(in_tri[1])
+        outside_verts.append(in_vert[1])
+    if d2 >= 0:
+        inside_points.append(in_tri[2])
+        inside_verts.append(in_vert[2])
+    else:
+        outside_points.append(in_tri[2])
+        outside_verts.append(in_vert[2])
+
+    # Now classify triangle points, and break the input triangle into 
+    # smaller output triangles if required. There are four possible
+    # outcomes...
+    front_tri1 = in_tri.copy()
+    front_tri2 = in_tri.copy()
+    behind_tris1 = in_tri.copy()
+    behind_tris2 = in_tri.copy()
+
+    if len(inside_points) == 0:
+        # All points lie on the outside of plane, so whole triangle behind
+        behind_tris1 = in_tri
+
+        return [behind_tris1],[], new_vert  # behind tris front tris new tris new vert
+
+    if len(inside_points) == 3:
+        # All points lie on the inside of plane, so whole triangle in front
+        front_tri1 = in_tri
+        return [],[front_tri1], new_vert
+
+    if len(inside_points) == 1 and len(outside_points) == 2:
+        # Triangle should be clipped. As two points lie outside
+        # the plane, the front triangle simply becomes a smaller triangle
+
+
+        # The inside point is valid, so keep that...
+        front_tri1[0] = inside_points[0]
+
+        # but the two new points are at the locations where the 
+        # original sides of the triangle (lines) intersect with the plane
+        nv1 = vector_IntersectPlane(plane_p, plane_n, inside_verts[0], outside_verts[0])
+        nv2 = vector_IntersectPlane(plane_p, plane_n, inside_verts[0], outside_verts[1])
+        if nv1 is None or nv2 is None :
+            return [], [] , new_vert
+        new_vert.append( np.array([*nv1,1.0]))
+        new_vert.append( np.array([*nv2,1.0]))
+        front_tri1[1] = n_vert
+        front_tri1[2] = n_vert + 1
+
+        behind_tris1[0] = n_vert
+        behind_tris1[1] = outside_points[0]
+        behind_tris1[2] = n_vert + 1
+
+        behind_tris2[0] = n_vert + 1
+        behind_tris2[1] = outside_points[0]
+        behind_tris2[2] = outside_points[1]
+   
+        return [behind_tris1,behind_tris2],[front_tri1] ,new_vert  # Return the newly formed single triangle
+
+    if len(inside_points) == 2 and len(outside_points) == 1:
+        # Triangle should be clipped. As two points lie inside the plane,
+        # the clipped triangle becomes a "quad". Fortunately, we can
+        # represent a quad with two new triangle
+
+        # The first triangle consists of the two inside points and a new
+        # point determined by the location where one side of the triangle
+        # intersects with the plane
+        front_tri1[0] = inside_points[0]
+        front_tri1[1] = inside_points[1]
+        front_tri1[2] = n_vert
+        nv1 = vector_IntersectPlane(plane_p, plane_n, inside_verts[0], outside_verts[0])
+        if nv1 is None:
+            return [] , [] , []
+        new_vert.append(np.array( [*nv1,1.0]))
+
+        # The second triangle is composed of one of the inside points, a
+        # new point determined by the intersection of the other side of the 
+        # triangle and the plane, and the newly created point above
+        front_tri2[0] = inside_points[1]
+        front_tri2[1] = front_tri1[2]
+        front_tri2[2] = n_vert + 1
+        nv2 = vector_IntersectPlane(plane_p, plane_n, inside_verts[1], outside_verts[0])
+        if  nv2 is None :
+            return [] , [] , []
+        new_vert.append(np.array([*nv2,1.0]))
+
+        behind_tris1[0] = n_vert
+        behind_tris1[1] = n_vert + 1
+        behind_tris1[2] = outside_points[0]
+        
+        return [behind_tris1],[front_tri1,front_tri2] ,new_vert   # Return two newly formed triangles which form a quad
 

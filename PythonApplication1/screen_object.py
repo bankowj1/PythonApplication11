@@ -130,38 +130,76 @@ class ScreenObject:
             triss,new_tris,new_vert = clip_tri_plane(np.array([0.0, 0.0, 0.1]), np.array([0.0, 0.0, 1.0]),triangle,np.array([v0[:3],v1[:3],v2[:3]]),n_vert)
             for ver in new_vert:
                 vert = np.append(vert,[ver], axis=0)
-            for tri in new_tris:
-                tris = np.append(tris,[tri], axis=0)
             for tri in triss:
                 vis_tri_idx.append(tri)
 
+
         z_extents = [self.get_z_extents([vert[tri_n[0]], vert[tri_n[1]], vert[tri_n[2]]]) for tri_n in vis_tri_idx]
+        
         sorted_triangles = []
         # Sort z_extents and triangles based on min_z values
         fortest = True
-        while(fortest):
+        stop_signing_int = 0
+        while(fortest and stop_signing_int < 2):
+            stop_signing_int = stop_signing_int + 1
             fortest = False
+            
             if(len(vis_tri_idx)>1):
                 sorted_data = sorted(zip(z_extents, vis_tri_idx), key=lambda x: x[0][0])
 
                 # Extract sorted z_extents and triangles
                 sorted_z_extents, sorted_triangles = zip(*sorted_data)
-
-                for i in range(len(sorted_z_extents) - 1):
-                    curr_extent = sorted_z_extents[i]
-                    next_extent = sorted_z_extents[i+1]
+                sorted_triangles = list(map(list, sorted_triangles))
+                sorted_z_extents = list(map(list, sorted_z_extents))
+                oldsort = sorted_triangles.copy()
+                oldz = sorted_z_extents.copy()
+                added_tris = 0
+                for i in range(len(oldz) - 1):
+                    curr_extent = oldz[i]
+                    next_extent = oldz[i+1]
 
                     if curr_extent[1] > next_extent[0]:
-                        if self.check_bounding_box_overlap([vert[sorted_triangles[i][0]], vert[sorted_triangles[i][1]], vert[sorted_triangles[i][2]]],[vert[sorted_triangles[i+1][0]], vert[sorted_triangles[i+1][1]], vert[sorted_triangles[i+1][2]]]):
-                            triss,new_tris,new_vert = clip_tri_plane(np.array([0.0, 0.0, 0.1]), np.array([0.0, 0.0, 1.0]),triangle,np.array([v0[:3],v1[:3],v2[:3]]),n_vert)
-                            #add new clip tri plane for division 
+                        curr_v0 = vert[oldsort[i][0]]
+                        curr_v1= vert[oldsort[i][1]]
+                        curr_v2= vert[oldsort[i][2]]
+                        next_v0 = vert[oldsort[i+1][0]]
+                        next_v1 = vert[oldsort[i+1][1]]
+                        next_v2 = vert[oldsort[i+1][2]]
+                        n_vert = len(sorted_triangles)
+                        if self.check_bounding_box_overlap([curr_v0, curr_v1, curr_v2],[next_v0, next_v1, next_v2]):
+                            # Get triangles that are in front of plane and behind
+                            v_a = curr_v1[:3]-curr_v0[:3]
+                            v_b = curr_v2[:3]-curr_v0[:3]
+                            normal = normalize(np.cross(v_a, v_b))
+                            behind_triss,front_triss,new_vert = devide_tri_plane(curr_v0[:3],normal,oldsort[i+1],np.array([next_v0[:3],next_v1[:3],next_v2[:3]]),n_vert)
+                            del sorted_triangles[i+1]
+                            del sorted_z_extents[i+1]
                             for ver in new_vert:
                                 vert = np.append(vert,[ver], axis=0)
-                            for tri in new_tris:
-                                tris = np.append(tris,[tri], axis=0)
-                            for tri in triss:
-                                vis_tri_idx.append(tri)
-                                #if new triangles fortest = true
+                            for j in range(len(front_triss)):
+                                tri = front_triss[j]
+                                z_ext = self.get_z_extents([vert[tri[0]], vert[tri[1]], vert[tri[2]]])
+                                newidx = i+j+1+added_tris
+                                sorted_triangles.insert(newidx,tri)# add after draw second is in front
+                                sorted_z_extents.insert(newidx,z_ext)
+                                if(j > 0):
+                                    added_tris = added_tris + j
+                                    fortest = True  # if chopped triangle repeat check
+                            for j in range(len(behind_triss)):
+                                tri = behind_triss[j]
+                                z_ext = self.get_z_extents([vert[tri[0]], vert[tri[1]], vert[tri[2]]])
+                                newidx = i+j+added_tris
+                                sorted_triangles.insert(newidx,tri) # add before draw first is behind
+                                sorted_z_extents.insert(newidx,z_ext)
+                                if(j > 0):
+                                    fortest = True # if chopped triangle repeat check
+
+                    
+                    
+
+
+                            
+                            
                 
                 
 
@@ -182,6 +220,6 @@ class ScreenObject:
                 #normalvec = np.linalg.norm(np.cross( poly[1]-poly[0],poly[2]-poly[0] ))
                 #if(np.dot(normalvec,poly[0]-self.position)[0]<0.0):
                 poly = poly[:,:2]
-                pg.draw.polygon(self.render.screen, pg.Color('yellow'),poly,3)
+                pg.draw.polygon(self.render.screen, pg.Color('red'),poly,3)
                 pg.draw.polygon(self.render.screen, pg.Color('white'),poly)
             print(1)
