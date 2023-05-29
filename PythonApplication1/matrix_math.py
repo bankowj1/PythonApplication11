@@ -88,21 +88,23 @@ def quaternion_to_euler_rad(q):
 
     return np.array([roll, pitch, yaw])
 
-def vector_IntersectPlane(plane_p, plane_n, lineStart, lineEnd):
-    """
-    Point on plain, normal to the plain,...
-    return intersection 
-    """
-    plane_n = plane_n / np.linalg.norm(plane_n)
-    plane_d = -np.dot(plane_n, plane_p)
-    ad = np.dot(lineStart, plane_n)
-    bd = np.dot(lineEnd, plane_n)
-    if np.abs(bd - ad) < 1e-8:
-        return None
-    t = (-plane_d - ad) / (bd - ad)
-    lineStartToEnd = lineEnd - lineStart
-    lineToIntersect = lineStartToEnd * t
-    return lineStart + lineToIntersect
+def vector_IntersectPlane(plane_p, plane_n, lineStart, lineEnd, epsilon=1e-6):
+    u = lineEnd - lineStart
+    dot = np.dot(plane_n,u)
+
+    if abs(dot) > epsilon:
+        # The factor of the point between p0 -> p1 (0 - 1)
+        # if 'fac' is between (0 - 1) the point intersects with the segment.
+        # Otherwise:
+        #  < 0.0: behind p0.
+        #  > 1.0: infront of p1.
+        w = lineStart -  plane_p
+        fac = -np.dot(plane_n, w) / dot
+        u = u * fac
+        return lineStart + u
+
+    # The segment is parallel to plane.
+    return None
 
 def normalize(v):
         return v / np.sqrt(np.sum(v**2)) if np.sqrt(np.sum(v**2)) >= 1e-6 else v
@@ -223,8 +225,6 @@ def clip_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         
         return [out_tri1, out_tri2],new_tris ,new_vert   # Return two newly formed triangles which form a quad
 
-
-
 def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
     # Make sure plane normal is indeed normal
     plane_n = normalize(plane_n)
@@ -233,8 +233,50 @@ def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
 
     # Function to compute signed shortest distance from point to plane
     def dist(p):
-        p = normalize(p)
-        return np.dot(plane_n, p) - np.dot(plane_n, plane_p)
+        v = p - plane_p
+        return np.dot(v, plane_n)
+
+    # Create temporary storage arrays to classify points either side of plane
+    # If distance sign is positive, point lies on "inside" of plane
+    inside_points = []
+    outside_points = []
+
+
+    # Get signed distance of each point in triangle to plane
+    d0 = dist(in_vert[0])
+    d1 = dist(in_vert[1])
+    d2 = dist(in_vert[2])
+
+    if d0 >= 0:
+        inside_points.append(in_tri[0])
+    else:
+        outside_points.append(in_tri[0])
+    if d1 >= 0:
+        inside_points.append(in_tri[1])
+    else:
+        outside_points.append(in_tri[1])
+    if d2 >= 0:
+        inside_points.append(in_tri[2])
+    else:
+        outside_points.append(in_tri[2])
+
+
+    if len(inside_points) == 0:
+        return True
+
+    return False
+
+'''
+def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
+    # Make sure plane normal is indeed normal
+    plane_n = normalize(plane_n)
+
+    new_vert = []
+
+    # Function to compute signed shortest distance from point to plane
+    def dist(p):
+        v = p - plane_p
+        return np.dot(v, plane_n)
 
     # Create temporary storage arrays to classify points either side of plane
     # If distance sign is positive, point lies on "inside" of plane
@@ -335,7 +377,7 @@ def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         # new point determined by the intersection of the other side of the 
         # triangle and the plane, and the newly created point above
         front_tri2[0] = inside_points[1]
-        front_tri2[1] = front_tri1[2]
+        front_tri2[1] = inside_points[0]
         front_tri2[2] = n_vert + 1
         nv2 = vector_IntersectPlane(plane_p, plane_n, inside_verts[1], outside_verts[0])
         if  nv2 is None :
@@ -347,4 +389,4 @@ def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
         behind_tris1[2] = outside_points[0]
         
         return [behind_tris1],[front_tri1,front_tri2] ,new_vert   # Return two newly formed triangles which form a quad
-
+'''

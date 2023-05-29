@@ -153,46 +153,41 @@ class ScreenObject:
                 sorted_z_extents = list(map(list, sorted_z_extents))
                 oldsort = sorted_triangles.copy()
                 oldz = sorted_z_extents.copy()
-                added_tris = 0
+                sorted_triangles = [oldsort[0]]
+                sorted_z_extents = [oldz[0]]
                 for i in range(len(oldz) - 1):
-                    curr_extent = oldz[i]
                     next_extent = oldz[i+1]
+                    next_v0 = vert[oldsort[i+1][0]]
+                    next_v1 = vert[oldsort[i+1][1]]
+                    next_v2 = vert[oldsort[i+1][2]]
+                    g = 0
+                    add = True
+                    for j in range(g,len(sorted_z_extents) - 1):
+                        curr_extent = sorted_triangles[j]
+                        
+                        if (curr_extent[1] > next_extent[0]):
+                            curr_v0 = vert[sorted_triangles[j][0]]
+                            curr_v1= vert[sorted_triangles[j][1]]
+                            curr_v2= vert[sorted_triangles[j][2]]
+                            n_vert = len(vert)
+                            if self.check_bounding_box_overlap([curr_v0, curr_v1, curr_v2],[next_v0, next_v1, next_v2]):
+                                # Get triangles that are in front of plane and behind
+                                normal = normalize(np.cross(curr_v1[:3]-curr_v0[:3], curr_v2[:3]-curr_v0[:3]))
+                                behind = devide_tri_plane(curr_v0[:3],normal,oldsort[i+1],np.array([next_v0[:3],next_v1[:3],next_v2[:3]]),n_vert)
+                                if (behind):
+                                    sorted_triangles.insert(j,oldsort[i+1])
+                                    sorted_z_extents.insert(j,oldz[i+1])
+                                    add = False
+                                    break
+                    if(add):
+                        sorted_triangles.append(oldsort[i+1])
+                        sorted_z_extents.append(oldz[i+1])
+                            
 
-                    if curr_extent[1] > next_extent[0]:
-                        curr_v0 = vert[oldsort[i][0]]
-                        curr_v1= vert[oldsort[i][1]]
-                        curr_v2= vert[oldsort[i][2]]
-                        next_v0 = vert[oldsort[i+1][0]]
-                        next_v1 = vert[oldsort[i+1][1]]
-                        next_v2 = vert[oldsort[i+1][2]]
-                        n_vert = len(sorted_triangles)
-                        if self.check_bounding_box_overlap([curr_v0, curr_v1, curr_v2],[next_v0, next_v1, next_v2]):
-                            # Get triangles that are in front of plane and behind
-                            v_a = curr_v1[:3]-curr_v0[:3]
-                            v_b = curr_v2[:3]-curr_v0[:3]
-                            normal = normalize(np.cross(v_a, v_b))
-                            behind_triss,front_triss,new_vert = devide_tri_plane(curr_v0[:3],normal,oldsort[i+1],np.array([next_v0[:3],next_v1[:3],next_v2[:3]]),n_vert)
-                            del sorted_triangles[i+1]
-                            del sorted_z_extents[i+1]
-                            for ver in new_vert:
-                                vert = np.append(vert,[ver], axis=0)
-                            for j in range(len(front_triss)):
-                                tri = front_triss[j]
-                                z_ext = self.get_z_extents([vert[tri[0]], vert[tri[1]], vert[tri[2]]])
-                                newidx = i+j+1+added_tris
-                                sorted_triangles.insert(newidx,tri)# add after draw second is in front
-                                sorted_z_extents.insert(newidx,z_ext)
-                                if(j > 0):
-                                    added_tris = added_tris + j
-                                    fortest = True  # if chopped triangle repeat check
-                            for j in range(len(behind_triss)):
-                                tri = behind_triss[j]
-                                z_ext = self.get_z_extents([vert[tri[0]], vert[tri[1]], vert[tri[2]]])
-                                newidx = i+j+added_tris
-                                sorted_triangles.insert(newidx,tri) # add before draw first is behind
-                                sorted_z_extents.insert(newidx,z_ext)
-                                if(j > 0):
-                                    fortest = True # if chopped triangle repeat check
+
+
+                                
+                            
 
                     
                     
