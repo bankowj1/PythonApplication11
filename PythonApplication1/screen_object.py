@@ -137,51 +137,51 @@ class ScreenObject:
         z_extents = [self.get_z_extents([vert[tri_n[0]], vert[tri_n[1]], vert[tri_n[2]]]) for tri_n in vis_tri_idx]
         
         sorted_triangles = []
-        # Sort z_extents and triangles based on min_z values
-        fortest = True
-        stop_signing_int = 0
-        while(fortest and stop_signing_int < 2):
-            stop_signing_int = stop_signing_int + 1
-            fortest = False
-            
-            if(len(vis_tri_idx)>1):
-                sorted_data = sorted(zip(z_extents, vis_tri_idx), key=lambda x: x[0][0])
 
-                # Extract sorted z_extents and triangles
-                sorted_z_extents, sorted_triangles = zip(*sorted_data)
-                sorted_triangles = list(map(list, sorted_triangles))
-                sorted_z_extents = list(map(list, sorted_z_extents))
-                oldsort = sorted_triangles.copy()
-                oldz = sorted_z_extents.copy()
-                sorted_triangles = [oldsort[0]]
-                sorted_z_extents = [oldz[0]]
-                for i in range(len(oldz) - 1):
-                    next_extent = oldz[i+1]
-                    next_v0 = vert[oldsort[i+1][0]]
-                    next_v1 = vert[oldsort[i+1][1]]
-                    next_v2 = vert[oldsort[i+1][2]]
-                    g = 0
-                    add = True
-                    for j in range(g,len(sorted_z_extents) - 1):
-                        curr_extent = sorted_triangles[j]
-                        
-                        if (curr_extent[1] > next_extent[0]):
-                            curr_v0 = vert[sorted_triangles[j][0]]
-                            curr_v1= vert[sorted_triangles[j][1]]
-                            curr_v2= vert[sorted_triangles[j][2]]
-                            n_vert = len(vert)
-                            if self.check_bounding_box_overlap([curr_v0, curr_v1, curr_v2],[next_v0, next_v1, next_v2]):
-                                # Get triangles that are in front of plane and behind
-                                normal = normalize(np.cross(curr_v1[:3]-curr_v0[:3], curr_v2[:3]-curr_v0[:3]))
-                                behind = devide_tri_plane(curr_v0[:3],normal,oldsort[i+1],np.array([next_v0[:3],next_v1[:3],next_v2[:3]]),n_vert)
-                                if (behind):
-                                    sorted_triangles.insert(j,oldsort[i+1])
-                                    sorted_z_extents.insert(j,oldz[i+1])
-                                    add = False
-                                    break
-                    if(add):
-                        sorted_triangles.append(oldsort[i+1])
-                        sorted_z_extents.append(oldz[i+1])
+        if(len(vis_tri_idx)>1):
+            sorted_data = sorted(zip(z_extents, vis_tri_idx), key=lambda x: x[0][0])
+
+            # Extract sorted z_extents and triangles
+            sorted_z_extents, sorted_triangles = zip(*sorted_data)
+            sorted_triangles = list(map(list, sorted_triangles))
+            sorted_z_extents = list(map(list, sorted_z_extents))
+            oldsort = sorted_triangles.copy()
+            oldz = sorted_z_extents.copy()
+            sorted_triangles = [oldsort[0]]
+            sorted_z_extents = [oldz[0]]
+            for i in range(len(oldz) - 1):
+                next_extent = oldz[i+1]
+                next_v0 = vert[oldsort[i+1][0]]
+                next_v1 = vert[oldsort[i+1][1]]
+                next_v2 = vert[oldsort[i+1][2]]
+                g = 0
+                add = True
+                for j in range(0,len(sorted_z_extents) - 1):
+                    curr_extent = sorted_triangles[j]
+                    curr_v0 = vert[sorted_triangles[j][0]]
+                    curr_v1= vert[sorted_triangles[j][1]]
+                    curr_v2= vert[sorted_triangles[j][2]]
+                    
+                    normal = normalize(np.cross(curr_v1[:3]-curr_v0[:3], curr_v2[:3]-curr_v0[:3]))
+                    front = devide_tri_plane(curr_v0[:3],normal,oldsort[i+1],np.array([next_v0[:3],next_v1[:3],next_v2[:3]]),n_vert)
+                    if (front==0):
+                        sorted_triangles.insert(j,oldsort[i+1])
+                        sorted_z_extents.insert(j,oldz[i+1])
+                        add = False
+                        break
+                    if(front == 3):
+                        continue
+                    normal = normalize(np.cross(next_v1[:3]-next_v0[:3], next_v2[:3]-next_v0[:3]))
+                    front = devide_tri_plane(next_v0[:3],normal,oldsort[i+1],np.array([curr_v0[:3],curr_v1[:3],curr_v2[:3]]),n_vert)
+                    if(front == 3):
+                        sorted_triangles.insert(j,oldsort[i+1])
+                        sorted_z_extents.insert(j,oldz[i+1])
+                        add = False
+                        break
+
+                if(add):
+                    sorted_triangles.append(oldsort[i+1])
+                    sorted_z_extents.append(oldz[i+1])
                             
 
 
@@ -209,6 +209,8 @@ class ScreenObject:
         ])
         vert = vert @ screen_mat
         vert = vert[:,:3]
+        i = 0
+        pos_nap = []
         if(len(sorted_triangles)>0):
             for tri in sorted_triangles:
                 poly = vert[tri]
@@ -217,4 +219,15 @@ class ScreenObject:
                 poly = poly[:,:2]
                 pg.draw.polygon(self.render.screen, pg.Color('red'),poly,3)
                 pg.draw.polygon(self.render.screen, pg.Color('white'),poly)
+                center_x = sum(point[0] for point in poly) // 3
+                center_y = sum(point[1] for point in poly) // 3
+                pos_nap.append([center_x,center_y])
+                
+                
+                # Render the number and display it in the center
+            for nap in pos_nap:
+                text = self.render.font.render(str(i), True, pg.Color('black'))
+                text_rect = text.get_rect(center=(nap[0], nap[1]))
+                self.render.screen.blit(text, text_rect)
+                i += 1
             print(1)

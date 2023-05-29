@@ -247,24 +247,20 @@ def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):
     d1 = dist(in_vert[1])
     d2 = dist(in_vert[2])
 
-    if d0 >= 0:
+    if d0 > 1e-6:
         inside_points.append(in_tri[0])
     else:
         outside_points.append(in_tri[0])
-    if d1 >= 0:
+    if d1 > 1e-6:
         inside_points.append(in_tri[1])
     else:
         outside_points.append(in_tri[1])
-    if d2 >= 0:
+    if d2 > 1e-6:
         inside_points.append(in_tri[2])
     else:
         outside_points.append(in_tri[2])
 
-
-    if len(inside_points) == 0:
-        return True
-
-    return False
+    return len(inside_points)
 
 '''
 def devide_tri_plane(plane_p, plane_n, in_tri, in_vert, n_vert):

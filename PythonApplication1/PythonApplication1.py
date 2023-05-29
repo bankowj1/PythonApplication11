@@ -26,18 +26,16 @@ class Rander:
     def draw(self):
         self.screen.fill(pg.Color('darkgray'))
         self.obj1.draw()
-        self.print_on_screen('Position')
-        self.print_on_screen(str(self.camera.position),offsetY=-20)
-        self.print_on_screen('Rotation',offsetY=-40)
-        self.print_on_screen(str(self.camera.rotation.yaw_pitch_roll),offsetY=-60)
+        self.print_on_screen('Position',self.RES[0] - 10,10)
+        self.print_on_screen(str(self.camera.position),self.RES[0] - 10,30)
+        self.print_on_screen('Rotation',self.RES[0] - 10,50)
+        self.print_on_screen(str(self.camera.rotation.yaw_pitch_roll),self.RES[0] - 10,70)
 
         
-    def print_on_screen(self,strtp,offsetX = 0 , offsetY = 0):
+    def print_on_screen(self,strtp,x_pos = 0 , y_pos = 0):
         text_surface = self.font.render(strtp, True, (255, 255, 255))
         text_size = text_surface.get_size()
-        x_pos = self.RES[0] - text_size[0] - 10  # 10 is a margin
-        y_pos = 10  # also with a margin
-        self.screen.blit(text_surface,(x_pos-offsetX,y_pos-offsetY))
+        self.screen.blit(text_surface,(x_pos-text_size[0],y_pos))
 
     def run(self):
         while True:
