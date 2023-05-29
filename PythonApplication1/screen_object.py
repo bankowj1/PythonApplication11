@@ -157,7 +157,7 @@ class ScreenObject:
                 g = 0
                 add = True
                 for j in range(0,len(sorted_z_extents) - 1):
-                    curr_extent = sorted_triangles[j]
+                    curr_extent = sorted_z_extents[j]
                     curr_v0 = vert[sorted_triangles[j][0]]
                     curr_v1= vert[sorted_triangles[j][1]]
                     curr_v2= vert[sorted_triangles[j][2]]
@@ -178,6 +178,7 @@ class ScreenObject:
                         sorted_z_extents.insert(j,oldz[i+1])
                         add = False
                         break
+
 
                 if(add):
                     sorted_triangles.append(oldsort[i+1])
