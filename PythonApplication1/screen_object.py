@@ -229,6 +229,6 @@ class ScreenObject:
             for nap in pos_nap:
                 text = self.render.font.render(str(i), True, pg.Color('black'))
                 text_rect = text.get_rect(center=(nap[0], nap[1]))
-                self.render.screen.blit(text, text_rect)
+                #self.render.screen.blit(text, text_rect)
                 i += 1
             print(1)

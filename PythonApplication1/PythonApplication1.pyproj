@@ -35,6 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="cube.obj" />
+    <Content Include="monkey.obj" />
     <Content Include="test.obj" />
     <Content Include="test2.obj" />
   </ItemGroup>
