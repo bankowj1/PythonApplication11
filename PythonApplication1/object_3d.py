@@ -7,7 +7,7 @@ class Object3D:
         self.vertices = vertices
         self.triangles = triangles
     def __init__(self):
-
+        pass
     def get_vertices(self):
         return self.vertices
 
@@ -24,15 +24,13 @@ class Object3D:
         vertices = []
         triangles = []
 
-        with open(filename, 'r') as f:
+        with open(filename) as f:
             for line in f:
-                line = line.strip()
                 if line.startswith('v '):
-                    vertex = tuple(map(float, line[2:].split()))
-                    vertices.append(vertex)
-                elif line.startswith('f '):
-                    triangle = tuple(map(int, line[2:].split()))
-                    triangles.append(triangle)
+                    vertices.append([float(i) for i in line.split()[1:]] + [1])
+                elif line.startswith('f'):
+                    faces_ = line.split()[1:]
+                    triangles.append([int(face_.split('/')[0]) - 1 for face_ in faces_])
 
         self.vertices = np.array(vertices)
         self.triangles = np.array(triangles)

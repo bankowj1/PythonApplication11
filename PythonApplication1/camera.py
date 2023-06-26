@@ -6,8 +6,8 @@ import numpy as np
 import pygame as pg
 
 class Camera:
-    def __init__(self, render, position: ndarray = np.array([0, 0, 0]), 
-                 rotation: ndarray = np.array([1, 0, 0, 0])):
+    def __init__(self, render, position: ndarray = np.array([0.0, 0.0, 0.0]), 
+                 rotation: ndarray = np.array([1.0, 0.0, 0.0, 0.0])):
         self.render = render
         self.position = position
         self.rotation = Quaternion(rotation).normalised
@@ -18,44 +18,77 @@ class Camera:
         self.aspect = render.HEIGHT / render.WIDTH
         self.near_plane = 0.1
         self.far_plane = 100
-        self.moving_speed = 0.3
+        self.moving_speed = 0.1
         self.rotation_speed = 0.015
+    def move(self,v):
+        q = Quaternion(0.0,*v)
+
+        res = self.rotation.conjugate * q * self.rotation
+
+        return np.array([res.x,res.y,-res.z])
 
     def control(self):
         key = pg.key.get_pressed()
+        mods = pg.key.get_mods()
         if key[pg.K_a]:
-            self.position -= self.right * self.moving_speed
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([0.0, math.radians(90), 0.0]),self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([self.moving_speed, 0.0,0.0]))
+                self.position += v
         if key[pg.K_d]:
-            self.position += self.right * self.moving_speed
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([0.0, math.radians(90), 0.0]),-self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([-self.moving_speed, 0.0,0.0]))
+                self.position += v
         if key[pg.K_w]:
-            self.position += self.forward * self.moving_speed
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([math.radians(90), 0.0, 0.0]),self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([ 0.0,0.0,self.moving_speed]))
+                self.position += v
         if key[pg.K_s]:
-            self.position -= self.forward * self.moving_speed
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([math.radians(90), 0.0, 0.0]),-self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([ 0.0,0.0,-self.moving_speed]))
+                self.position += v
         if key[pg.K_q]:
-            self.position += self.up * self.moving_speed
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([0.0, 0.0, math.radians(90)]),self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([ 0.0,self.moving_speed,0.0]))
+                self.position += v
         if key[pg.K_e]:
-            self.position -= self.up * self.moving_speed
-
-        if key[pg.K_LEFT]:
-            self.camera_yaw(-self.rotation_speed)
-        if key[pg.K_RIGHT]:
-            self.camera_yaw(self.rotation_speed)
-        if key[pg.K_UP]:
-            self.camera_pitch(-self.rotation_speed)
-        if key[pg.K_DOWN]:
-            self.camera_pitch(self.rotation_speed)
+            if mods & pg.KMOD_SHIFT:
+                rotation = Quaternion._from_axis_angle(np.array([0.0, 0.0,math.radians(90)]),-self.rotation_speed)
+                self.camera_rotate(rotation)
+            else:
+                v = self.move(np.array([ 0.0,-self.moving_speed,0.0]))
+                self.position += v
 
     def camera_rotate(self, angle):
-        self.rotation = (self.rotation*angle).normalised
+        print(angle)
+        print(self.rotation)
+        print(angle.normalised)
+        print(self.rotation.normalised)
+        print((self.rotation*angle.normalised).normalised)
+        self.rotation = (self.rotation*angle.normalised).normalised
 
 
     def axiiIdentity(self):
-        self.forward = np.array([0, 0, 1])
-        self.up = np.array([0, 1, 0])
-        self.right = np.array([1, 0, 0])
+        self.forward = np.array([1,0, 0, 1])
+        self.up = np.array([1,0, 1, 0])
+        self.right = np.array([1,1, 0, 0])
 
     def camera_update_axii(self):
-        rotate = self.rotation.rotation_matrix
+        rotate = self.rotation.transformation_matrix
         self.axiiIdentity()
         self.forward = self.forward @ rotate
         self.right = self.right @ rotate
@@ -63,7 +96,7 @@ class Camera:
 
     def camera_matrix(self):
         self.camera_update_axii()
-        return translate(self.position) @ self.rotation.rotation_matrix
+        return np.linalg.inv(self.rotation.transformation_matrix@translate(self.position))
 
     def projection_matrix(self):
         m00 = self.aspect*(1/math.tan(math.radians(self.fov/ 2)))

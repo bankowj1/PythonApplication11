@@ -35,6 +35,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="cube.obj" />
+    <Content Include="monkey.obj" />
+    <Content Include="test.obj" />
+    <Content Include="test2.obj" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
